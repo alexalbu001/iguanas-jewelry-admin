@@ -21,6 +21,16 @@ class AuthService {
   public baseURL: string = process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'https://localhost:8080';
   public adminOrigin: string = process.env.REACT_APP_ADMIN_ORIGIN || 'http://localhost:3001';
 
+  // Helper function to read cookies
+  private getCookie(name: string): string | null {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  }
+
   // All token and user management is now handled by httpOnly cookies
   // These methods are removed as they're no longer needed
 
@@ -168,14 +178,15 @@ class AuthService {
   }
 
   async apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // CSRF token is now stored in httpOnly cookie by the backend
-    // No need to get it from localStorage
+    // Get CSRF token from cookie for additional security
+    const csrfToken = this.getCookie('csrf_token');
     
     const config: RequestInit = {
       ...options,
       credentials: 'include', // Include httpOnly cookies (including CSRF token)
       headers: {
         'Content-Type': 'application/json',
+        ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         ...options.headers,
       },
     };
